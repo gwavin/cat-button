@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+<title>Off the counter!</title>
+<style>
+html,body{margin:0;height:100%;background:#0f172a;color:#e2e8f0;font-family:system-ui,-apple-system,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px}
+button#go{width:min(78vw,78vh);height:min(78vw,78vh);border-radius:50%;border:none;background:radial-gradient(circle at 35% 30%,#38bdf8,#0369a1);color:#fff;font-size:min(12vw,64px);font-weight:800;box-shadow:0 12px 40px #0ea5e955;touch-action:manipulation;transition:transform .06s}
+button#go:active,button#go.hit{transform:scale(.94);background:radial-gradient(circle at 35% 30%,#7dd3fc,#0284c7)}
+.modes{display:flex;gap:8px}
+.modes button{background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:999px;padding:8px 14px;font-size:15px}
+.modes button.on{background:#0ea5e9;color:#fff;border-color:#0ea5e9}
+p{margin:0;font-size:13px;color:#64748b}
+</style></head><body><main>
+<button id="go" aria-label="Play deterrent sound">💦 PSST</button>
+<div class="modes">
+<button data-m="mix" class="on">Mix</button><button data-m="0">Hiss</button><button data-m="1">12 kHz</button><button data-m="2">Sweep</button>
+</div>
+<p>Turn volume all the way up. Mix rotates sounds so she doesn't get used to one.</p>
+</main>
+<script>
+const files=['hf-hiss-burst.mp3','tone-12k-pulses.mp3','hf-sweep-double.mp3'];
+let ctx,bufs=[],mode='mix',last=-1;
+async function init(){
+  if(ctx)return;
+  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  bufs=await Promise.all(files.map(f=>fetch(f).then(r=>r.arrayBuffer()).then(a=>new Promise((res,rej)=>ctx.decodeAudioData(a,res,rej)))));
+}
+function pick(){
+  if(mode!=='mix')return +mode;
+  let i;do{i=Math.floor(Math.random()*files.length)}while(i===last&&files.length>1);return last=i;
+}
+const go=document.getElementById('go');
+go.addEventListener('pointerdown',async e=>{
+  e.preventDefault();
+  go.classList.add('hit');setTimeout(()=>go.classList.remove('hit'),150);
+  await init(); if(ctx.state==='suspended')await ctx.resume();
+  const s=ctx.createBufferSource();s.buffer=bufs[pick()];s.connect(ctx.destination);s.start();
+  if(navigator.vibrate)navigator.vibrate(0);
+});
+document.querySelectorAll('.modes button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.modes button').forEach(x=>x.classList.remove('on'));b.classList.add('on');mode=b.dataset.m;});
+</script></body></html>
